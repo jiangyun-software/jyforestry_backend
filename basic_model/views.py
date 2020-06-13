@@ -1,9 +1,17 @@
 from django.shortcuts import render
 from django.http import JsonResponse,HttpResponse
 from .predict_model import predict_cover_type
-# Create your views here.
 from sklearn import preprocessing
 from django.views.decorators.csrf import csrf_exempt
+from .models import SheetUpload,ImageUpload
+from .serializers import SheetUploadSerializer,ImageUploadSerializer
+
+#rest
+from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.response import Response
+from rest_framework import status
+
 
 attributes = ['Elevation', 'Aspect', 'Slope',
 'Horizontal_Distance_To_Hydrology', 'Vertical_Distance_To_Hydrology',
@@ -21,8 +29,13 @@ attributes = ['Elevation', 'Aspect', 'Slope',
 'Soil_Type33', 'Soil_Type34', 'Soil_Type35', 'Soil_Type36',
 'Soil_Type37', 'Soil_Type38', 'Soil_Type39', 'Soil_Type40',]
 
-@csrf_exempt
+
 def test(request):
+    return HttpResponse("test")
+
+#手动输入信息
+@csrf_exempt
+def form(request):
     if request.method == "POST":
         data = [[]]
         for attribute in attributes:
@@ -32,3 +45,46 @@ def test(request):
         return HttpResponse(str(res))
     else:
         return HttpResponse("test")
+
+#上传图片
+class ImageUploadView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+
+    def get(self, request, *args, **kwargs):
+        images = ImageUpload.objects.all()
+        serializer = ImageUploadSerializer(images, many=True)
+        return Response(serializer.data)
+    
+    def post(self, request, *args, **kwargs):
+        images_serializer = ImageUploadSerializer(data=request.data)
+        if images_serializer.is_valid():
+            images_serializer.save()
+            return Response(images_serializer.data)
+        else:
+            print('error', images_serializer.errors)
+            return Response(images_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class SheetUploadView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+
+    def get(self, request, *args, **kwargs):
+        sheets = SheetUpload.objects.all()
+        serializer = SheetUploadSerializer(sheets, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, *args, **kwargs):
+        sheets_serializer = SheetUploadSerializer(data=request.data)
+        if sheets_serializer.is_valid():
+            #保存到数据库
+            sheets_serializer.save()
+            
+            #获得表格
+            sheet = sheets_serializer.data["sheet"][1:]
+            
+   
+            return Response(sheets_serializer.data)
+        else:
+            print('error',sheets_serializer.errors)
+            return Response(sheets_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
