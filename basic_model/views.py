@@ -5,13 +5,15 @@ from sklearn import preprocessing
 from django.views.decorators.csrf import csrf_exempt
 from .models import SheetUpload,ImageUpload
 from .serializers import SheetUploadSerializer,ImageUploadSerializer
+import os
 
 #rest
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework import status
-
+import pandas as pd
+import numpy as np
 
 attributes = ['Elevation', 'Aspect', 'Slope',
 'Horizontal_Distance_To_Hydrology', 'Vertical_Distance_To_Hydrology',
@@ -29,7 +31,7 @@ attributes = ['Elevation', 'Aspect', 'Slope',
 'Soil_Type33', 'Soil_Type34', 'Soil_Type35', 'Soil_Type36',
 'Soil_Type37', 'Soil_Type38', 'Soil_Type39', 'Soil_Type40',]
 
-
+@csrf_exempt
 def test(request):
     return HttpResponse("test")
 
@@ -80,9 +82,16 @@ class SheetUploadView(APIView):
             
             #获得表格
             sheet = sheets_serializer.data["sheet"][1:]
-            
-   
-            return Response(sheets_serializer.data)
+            df = pd.read_csv(sheet,engine='python')
+            data = np.asarray(df[attributes])
+            from sklearn import preprocessing
+            data = preprocessing.StandardScaler().fit(data).transform(data)
+            res = predict_cover_type(data)
+            df['prediction'] = res
+            df.to_csv(sheet,index=False)
+
+            with open(sheet) as myfile:
+                return HttpResponse(myfile, content_type='text/csv')
         else:
             print('error',sheets_serializer.errors)
             return Response(sheets_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
