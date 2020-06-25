@@ -52,7 +52,7 @@ def form(request):
     else:
         return HttpResponse("请使用POST方式来传输信息")
 
-#
+
 #接收上传的图片，若在数据库中不存在，则将图片存入/media/upload_images/,将图片信息存入数据库
 class ImageUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)
